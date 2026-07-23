@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SonaCode IDE v5.1 — Local Folder & Live Preview</title>
+    <style>
+        :root {
+            --bg-base: #F8FAFC;
+            --bg-surface: rgba(255, 255, 255, 0.95);
+            --bg-card: #FFFFFF;
+            --bg-hover: rgba(56, 189, 248, 0.1);
+            --border-light: #E2E8F0;
+            --border-bright: #38BDF8;
+            --text-main: #0F172A;
+            --text-muted: #64748B;
+            --accent: #0284C7;
+            --accent-gradient: linear-gradient(135deg, #38BDF8 0%, #0284C7 100%);
+            --font-code: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --radius: 8px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-ui);
+            background: var(--bg-base);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-size: 13px;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            height: 44px; background: var(--bg-surface);
+            border-bottom: 1px solid var(--border-light);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 12px; gap: 8px;
+        }
+
+        .brand { font-weight: 800; color: var(--accent); font-size: 15px; display: flex; align-items: center; gap: 6px; }
+
+        .btn {
+            background: #FFF; color: var(--text-main); border: 1px solid var(--border-light);
+            padding: 5px 10px; border-radius: var(--radius); cursor: pointer;
+            font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;
+            transition: all 0.2s ease;
+        }
+        .btn:hover { background: var(--bg-hover); border-color: var(--border-bright); color: var(--accent); }
+        .btn-primary { background: var(--accent-gradient); color: #FFF; border: none; }
+        .btn-danger { color: #E11D48; border-color: #FECDD3; }
+        .btn-danger:hover { background: #FFE4E6; }
+
+        /* Main Workspace */
+        .main-container { display: flex; flex: 1; overflow: hidden; padding: 6px; gap: 6px; }
+
+        .sidebar {
+            width: 230px; background: var(--bg-surface);
+            border: 1px solid var(--border-light); border-radius: var(--radius);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .sidebar-header {
+            padding: 8px 12px; font-weight: 700; font-size: 11px; color: var(--text-muted);
+            border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center;
+        }
+        .file-tree { flex: 1; overflow-y: auto; padding: 6px; }
+        .file-item {
+            padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;
+            display: flex; align-items: center; gap: 6px; margin-bottom: 2px;
+        }
+        .file-item:hover { background: var(--bg-hover); color: var(--accent); }
+        .file-item.active { background: #E0F2FE; color: var(--accent); font-weight: 600; }
+
+        .workspace-area { flex: 1; display: flex; gap: 6px; }
+
+        .editor-pane {
+            flex: 1; display: flex; flex-direction: column;
+            background: #FFF; border: 1px solid var(--border-light); border-radius: var(--radius);
+            overflow: hidden; position: relative;
+        }
+
+        .editor-toolbar {
+            height: 36px; background: #F1F5F9; border-bottom: 1px solid var(--border-light);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 8px;
+        }
+
+        .code-area {
+            flex: 1; width: 100%; border: none; outline: none; padding: 12px;
+            font-family: var(--font-code); font-size: 13px; line-height: 1.6;
+            resize: none; background: #FFF; color: var(--text-main);
+        }
+
+        /* Modal Preview Window */
+        .preview-modal {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px);
+            display: none; justify-content: center; align-items: center; z-index: 5000;
+        }
+        .preview-modal.visible { display: flex; }
+        .preview-container {
+            width: 85vw; height: 85vh; background: #FFF; border-radius: var(--radius);
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        .preview-header {
+            padding: 10px 16px; background: #F8FAFC; border-bottom: 1px solid var(--border-light);
+            display: flex; justify-content: space-between; align-items: center; font-weight: 700;
+        }
+        .preview-iframe { flex: 1; width: 100%; border: none; background: #FFF; }
+    </style>
+</head>
+<body>
+
+    <header class="top-bar">
+        <div class="brand">⚡ SonaCode IDE</div>
+        
+        <div style="display:flex; gap:6px;">
+            <button class="btn" onclick="SonaCode.selectFolder()">📁 Открыть папку с ПК</button>
+            <button class="btn" onclick="SonaCode.createNewFile()">📄 Создать файл</button>
+            <button class="btn btn-danger" onclick="SonaCode.clearInput()">🧹 Очистить редактор</button>
+            <button class="btn btn-primary" onclick="SonaCode.openPreview()">🌐 Просмотр в браузере</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span>ПРОЕКТ</span>
+                <button class="btn" onclick="SonaCode.createNewFile()" style="padding: 2px 6px;">+</button>
+            </div>
+            <div class="file-tree" id="file-tree"></div>
+        </aside>
+
+        <div class="workspace-area">
+            <main class="editor-pane">
+                <div class="editor-toolbar">
+                    <span id="current-filename" style="font-weight:600; color:var(--text-muted)">index.html</span>
+                    <button class="btn" onclick="SonaCode.saveCurrentFile()" style="padding: 3px 8px;">Сохранить (Ctrl+S)</button>
+                </div>
+                <textarea class="code-area" id="code-input" placeholder="Вставьте ваш HTML/JS/CSS код сюда или выберите файл..." spellcheck="false"></textarea>
+            </main>
+        </div>
+    </div>
+
+    <div class="preview-modal" id="preview-modal">
+        <div class="preview-container">
+            <div class="preview-header">
+                <span>🌐 Просмотр в браузере (Live Preview)</span>
+                <button class="btn btn-danger" onclick="SonaCode.closePreview()">✕ Закрыть</button>
+            </div>
+            <iframe class="preview-iframe" id="preview-frame"></iframe>
+        </div>
+    </div>
+
+    <script>
+        class SonaCodeApp {
+            constructor() {
+                this.files = [
+                    { id: '1', name: 'index.html', content: '<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: sans-serif; text-align: center; padding: 50px; background: #e0f2fe; }\n    h1 { color: #0284c7; }\n  </style>\n</head>\n<body>\n  <h1>Привет! Ваш код работает!</h1>\n  <p>Отредактируйте текст и нажмите "Просмотр в браузере".</p>\n</body>\n</html>' }
+                ];
+                this.activeFileId = '1';
+                this.input = document.getElementById('code-input');
+                this.init();
+            }
+
+            init() {
+                this.renderFileTree();
+                this.openFile('1');
+
+                // Горячие клавиши
+                document.addEventListener('keydown', (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                        e.preventDefault();
+                        this.saveCurrentFile();
+                    }
+                });
+            }
+
+            // 1. ВЫБРАТЬ ПАПКУ С ПК
+            async selectFolder() {
+                if (!('showDirectoryPicker' in window)) {
+                    alert('Ваш браузер не поддерживает прямую работу с папками. Используйте Chrome, Edge или Opera.');
+                    return;
+                }
+
+                try {
+                    const dirHandle = await window.showDirectoryPicker();
+                    this.files = [];
+                    
+                    for await (const entry of dirHandle.values()) {
+                        if (entry.kind === 'file') {
+                            const fileData = await entry.getFile();
+                            const text = await fileData.text();
+                            this.files.push({
+                                id: Date.now() + Math.random().toString(),
+                                name: entry.name,
+                                content: text
+                            });
+                        }
+                    }
+
+                    if (this.files.length > 0) {
+                        this.renderFileTree();
+                        this.openFile(this.files[0].id);
+                    } else {
+                        alert('Папка пуста или не содержит поддерживаемых файлов.');
+                    }
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        console.error('Ошибка открытия папки:', err);
+                    }
+                }
+            }
+
+            // 2. СОЗДАТЬ ФАЙЛ
+            createNewFile() {
+                const name = prompt('Введите имя нового файла:', 'script.js');
+                if (!name) return;
+
+                const newFile = {
+                    id: Date.now().toString(),
+                    name: name,
+                    content: ''
+                };
+                this.files.push(newFile);
+                this.renderFileTree();
+                this.openFile(newFile.id);
+            }
+
+            // 3. ОЧИСТКА ВВОДА
+            clearInput() {
+                if (confirm('Удалить весь код из текущего окна ввода?')) {
+                    this.input.value = '';
+                    this.saveCurrentFile();
+                }
+            }
+
+            // 4. ПРОСМОТР В БРАУЗЕРЕ (LIVE PREVIEW)
+            openPreview() {
+                const code = this.input.value;
+                const modal = document.getElementById('preview-modal');
+                const iframe = document.getElementById('preview-frame');
+
+                // Запись кода внутрь iframe для мгновенного рендеринга
+                iframe.srcdoc = code;
+                modal.classList.add('visible');
+            }
+
+            closePreview() {
+                document.getElementById('preview-modal').classList.remove('visible');
+            }
+
+            // Вспомогательные методы работы с файлами
+            renderFileTree() {
+                const container = document.getElementById('file-tree');
+                container.innerHTML = this.files.map(f => `
+                    <div class="file-item ${f.id === this.activeFileId ? 'active' : ''}" onclick="SonaCode.openFile('${f.id}')">
+                        📄 ${f.name}
+                    </div>
+                `).join('');
+            }
+
+            openFile(id) {
+                const file = this.files.find(f => f.id === id);
+                if (file) {
+                    this.activeFileId = id;
+                    this.input.value = file.content;
+                    document.getElementById('current-filename').textContent = file.name;
+                    this.renderFileTree();
+                }
+            }
+
+            saveCurrentFile() {
+                const file = this.files.find(f => f.id === this.activeFileId);
+                if (file) {
+                    file.content = this.input.value;
+                }
+            }
+        }
+
+        let SonaCode;
+        window.addEventListener('DOMContentLoaded', () => { SonaCode = new SonaCodeApp(); });
+    </script>
+</body>
+</html>
