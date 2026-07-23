@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SonaCode IDE v5.0 — AI Agent & Full Project Engine</title>
+    <style>
+        /* ==========================================================================
+           1. СТИЛИ И ПАЛИТРА (LIGHT BLUE GLASSMORPHISM)
+           ========================================================================== */
+        :root {
+            --bg-base: #F8FAFC;
+            --bg-surface: rgba(255, 255, 255, 0.9);
+            --bg-card: #FFFFFF;
+            --bg-hover: rgba(56, 189, 248, 0.08);
+            --bg-active: rgba(56, 189, 248, 0.15);
+            
+            --border-light: #E2E8F0;
+            --border-bright: #7DD3FC;
+
+            --text-main: #0F172A;
+            --text-muted: #64748B;
+            --gutter-fg: #94A3B8;
+
+            --accent: #0284C7;
+            --accent-hover: #0369A1;
+            --accent-light: #38BDF8;
+            --accent-soft: #E0F2FE;
+            --accent-glow: rgba(56, 189, 248, 0.25);
+            --accent-gradient: linear-gradient(135deg, #38BDF8 0%, #0284C7 100%);
+
+            --bg-editor: #FFFFFF;
+            --syn-keyword: #0284C7;
+            --syn-string: #059669;
+            --syn-number: #D97706;
+            --syn-comment: #94A3B8;
+
+            --font-code: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+            --font-size: 13px;
+            --radius-main: 10px;
+            --radius-sm: 6px;
+            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(2, 132, 199, 0.05);
+            --blur: blur(10px);
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+        body {
+            font-family: var(--font-ui);
+            background: var(--bg-base);
+            background-image: 
+                radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.12) 0%, transparent 35%),
+                radial-gradient(circle at 100% 100%, rgba(2, 132, 199, 0.08) 0%, transparent 35%);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-size: var(--font-size);
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+        /* ВЕРХНЯЯ ПАНЕЛЬ */
+        .top-bar {
+            height: 42px; background: var(--bg-surface); backdrop-filter: var(--blur);
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--border-light); padding: 0 14px; z-index: 100;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .brand-container { display: flex; align-items: center; gap: 10px; }
+        .brand-logo {
+            width: 26px; height: 26px; background: var(--accent-gradient);
+            border-radius: var(--radius-sm); display: flex; align-items: center;
+            justify-content: center; color: #FFF; font-weight: 800; font-size: 14px;
+        }
+
+        .brand-title { font-weight: 700; font-size: 14px; color: var(--text-main); }
+
+        .menu-bar { display: flex; gap: 2px; }
+        .menu-item { padding: 4px 8px; border-radius: var(--radius-sm); cursor: pointer; color: var(--text-muted); font-weight: 500; }
+        .menu-item:hover { background: var(--bg-hover); color: var(--accent); }
+
+        .btn {
+            background: #FFF; color: var(--text-main); border: 1px solid var(--border-light);
+            padding: 4px 10px; border-radius: var(--radius-sm); cursor: pointer;
+            font-size: 12px; font-weight: 600; transition: var(--transition);
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn:hover { background: var(--bg-hover); border-color: var(--border-bright); color: var(--accent); }
+        .btn-primary { background: var(--accent-gradient); color: #FFF; border: none; }
+
+        /* MAIN LAYOUT */
+        .main-container { display: flex; flex: 1; overflow: hidden; padding: 6px; gap: 6px; }
+
+        .activity-bar {
+            width: 44px; background: var(--bg-surface); backdrop-filter: var(--blur);
+            border: 1px solid var(--border-light); border-radius: var(--radius-main);
+            display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 10px;
+        }
+        .activity-icon {
+            width: 32px; height: 32px; border-radius: var(--radius-sm);
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; color: var(--text-muted); transition: var(--transition);
+        }
+        .activity-icon:hover, .activity-icon.active { color: var(--accent); background: var(--accent-soft); }
+
+        .sidebar {
+            width: 240px; background: var(--bg-surface); backdrop-filter: var(--blur);
+            border: 1px solid var(--border-light); border-radius: var(--radius-main);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .sidebar-header {
+            padding: 10px 12px; font-weight: 700; font-size: 11px;
+            color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 6px; }
+
+        .file-item {
+            padding: 6px 8px; border-radius: var(--radius-sm); display: flex;
+            align-items: center; cursor: pointer; font-size: 12px; gap: 6px;
+        }
+        .file-item:hover { background: var(--bg-hover); color: var(--accent); }
+        .file-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+        .file-item.folder { font-weight: 700; color: var(--text-muted); margin-top: 4px; }
+
+        /* WORKSPACE & EDITOR */
+        .workspace-area { flex: 1; display: flex; gap: 6px; overflow: hidden; }
+
+        .editor-pane {
+            flex: 1; display: flex; flex-direction: column;
+            background: var(--bg-surface); backdrop-filter: var(--blur);
+            border: 1px solid var(--border-light); border-radius: var(--radius-main);
+            position: relative; overflow: hidden;
+        }
+
+        .breadcrumbs {
+            height: 24px; background: #F8FAFC; border-bottom: 1px solid var(--border-light);
+            display: flex; align-items: center; padding: 0 12px; font-size: 11px; color: var(--text-muted); gap: 6px;
+        }
+
+        .tabs-container {
+            height: 36px; background: #F1F5F9; display: flex;
+            overflow-x: auto; padding: 4px 4px 0 4px; gap: 4px; border-bottom: 1px solid var(--border-light);
+        }
+        .tab {
+            display: flex; align-items: center; padding: 0 12px; background: transparent;
+            border-radius: 6px 6px 0 0; cursor: pointer; min-width: 110px;
+            justify-content: space-between; font-size: 12px; color: var(--text-muted);
+        }
+        .tab.active { background: var(--bg-editor); color: var(--accent); font-weight: 600; border-top: 2px solid var(--accent); }
+
+        .editor-container { flex: 1; position: relative; display: flex; background: var(--bg-editor); overflow: hidden; }
+        .gutter {
+            width: 40px; background: #FAFAFA; border-right: 1px solid var(--border-light);
+            color: var(--gutter-fg); font-family: var(--font-code); font-size: var(--font-size);
+            line-height: 1.6; text-align: right; padding-right: 8px; padding-top: 8px; user-select: none;
+        }
+
+        .code-area-wrapper { position: relative; flex: 1; height: 100%; overflow: auto; }
+        .code-highlight, .code-input {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            padding: 8px 12px; font-family: var(--font-code); font-size: var(--font-size);
+            line-height: 1.6; tab-size: 4; white-space: pre; border: none; outline: none; background: transparent;
+        }
+        .code-input { color: transparent; caret-color: var(--accent); resize: none; z-index: 1; }
+        .code-highlight { z-index: 0; pointer-events: none; color: var(--text-main); }
+
+        .minimap {
+            width: 60px; background: #FAFAFA; border-left: 1px solid var(--border-light);
+            font-family: var(--font-code); font-size: 3px; line-height: 4px; padding: 4px; overflow: hidden;
+        }
+
+        /* BOTTOM PANEL (TERMINAL, OUTPUT, PROBLEMS) */
+        .bottom-panel {
+            height: 140px; background: var(--bg-surface); border-top: 1px solid var(--border-light);
+            display: flex; flex-direction: column;
+        }
+        .panel-tabs { display: flex; background: #F1F5F9; border-bottom: 1px solid var(--border-light); }
+        .panel-tab { padding: 4px 12px; font-size: 11px; cursor: pointer; color: var(--text-muted); font-weight: 600; }
+        .panel-tab.active { background: #FFF; color: var(--accent); border-top: 2px solid var(--accent); }
+        .panel-body { flex: 1; padding: 8px; font-family: var(--font-code); font-size: 11px; overflow-y: auto; background: #FFF; }
+
+        /* AI SIDEBAR & AGENT STATUS */
+        .ai-sidebar {
+            width: 360px; background: var(--bg-surface); backdrop-filter: var(--blur);
+            border: 1px solid var(--border-light); border-radius: var(--radius-main);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .ai-sidebar.hidden { display: none; }
+        .ai-header { padding: 10px 14px; background: #FFF; border-bottom: 1px solid var(--border-light); font-weight: 700; display: flex; justify-content: space-between; }
+
+        .ai-config-box { padding: 8px 12px; background: var(--accent-soft); border-bottom: 1px solid var(--border-light); display: flex; flex-direction: column; gap: 6px; }
+        .ai-select, .ai-input-key { width: 100%; padding: 4px 8px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-size: 11px; background: #FFF; }
+
+        .agent-status-box {
+            padding: 8px 12px; background: #F0FDF4; border-bottom: 1px solid #BBF7D0;
+            font-size: 11px; color: #166534; display: none;
+        }
+        .agent-status-box.active { display: block; }
+
+        .ai-chat-body { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .chat-bubble { padding: 8px 12px; border-radius: 8px; font-size: 12px; line-height: 1.4; max-width: 90%; }
+        .chat-bubble.user { background: var(--accent-gradient); color: #FFF; align-self: flex-end; }
+        .chat-bubble.ai { background: #FFF; border: 1px solid var(--border-light); color: var(--text-main); align-self: flex-start; }
+
+        .ai-input-area { padding: 10px; background: #FFF; border-top: 1px solid var(--border-light); display: flex; gap: 6px; flex-direction: column; }
+        .ai-textarea { width: 100%; border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 6px; font-size: 12px; height: 50px; resize: none; }
+
+        /* DIFF MODAL */
+        .diff-modal {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.3); backdrop-filter: var(--blur);
+            display: flex; justify-content: center; align-items: center; z-index: 4000;
+            opacity: 0; pointer-events: none; transition: var(--transition);
+        }
+        .diff-modal.visible { opacity: 1; pointer-events: all; }
+        .diff-container { background: #FFF; border-radius: var(--radius-main); width: 800px; height: 500px; border: 1px solid var(--border-bright); display: flex; flex-direction: column; }
+        .diff-header { padding: 12px; background: var(--bg-base); border-bottom: 1px solid var(--border-light); font-weight: 700; display: flex; justify-content: space-between; }
+        .diff-body { flex: 1; display: flex; font-family: var(--font-code); font-size: 12px; overflow: auto; }
+        .diff-pane { flex: 1; padding: 10px; overflow-y: auto; white-space: pre-wrap; }
+        .diff-pane.old { background: #FEF2F2; border-right: 1px solid var(--border-light); }
+        .diff-pane.new { background: #F0FDF4; }
+        .diff-footer { padding: 10px; background: var(--bg-base); border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 8px; }
+
+        .status-bar { height: 22px; background: var(--bg-surface); border-top: 1px solid var(--border-light); color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 11px; }
+
+        .token-keyword { color: var(--syn-keyword); font-weight: 600; }
+        .token-string { color: var(--syn-string); }
+        .token-number { color: var(--syn-number); }
+        .token-comment { color: var(--syn-comment); font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <header class="top-bar">
+        <div class="brand-container">
+            <div class="brand-logo">S</div>
+            <span class="brand-title">SonaCode IDE v5.0</span>
+            <div class="menu-bar">
+                <div class="menu-item" onclick="SonaCode.createNewFile()">Файл +</div>
+                <div class="menu-item" onclick="SonaCode.createNewFolder()">Папка +</div>
+                <div class="menu-item" onclick="SonaCode.saveCurrentFile()">Сохранить (Ctrl+S)</div>
+            </div>
+        </div>
+
+        <div class="top-actions">
+            <button class="btn" onclick="SonaCode.toggleAI()"><span style="color:var(--accent)">✨</span> AI Agent</button>
+            <button class="btn btn-primary" onclick="SonaCode.runCode()">▶ Run</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="activity-bar">
+            <div class="activity-icon active" title="Проводник">📁</div>
+            <div class="activity-icon" title="AI Agent" onclick="SonaCode.toggleAI()">✨</div>
+            <div class="activity-icon" title="Git Changes">🌿</div>
+        </div>
+
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span>ПРОЕКТ</span>
+                <div>
+                    <button class="btn" onclick="SonaCode.createNewFile()" style="padding: 2px 4px;">+F</button>
+                    <button class="btn" onclick="SonaCode.createNewFolder()" style="padding: 2px 4px;">+D</button>
+                </div>
+            </div>
+            <div class="sidebar-content" id="file-tree"></div>
+        </aside>
+
+        <div class="workspace-area">
+            <main class="editor-pane">
+                <div class="tabs-container" id="tabs-container"></div>
+                <div class="breadcrumbs" id="breadcrumbs">root / index.html</div>
+                
+                <div class="editor-container">
+                    <div class="gutter" id="gutter">1</div>
+                    <div class="code-area-wrapper">
+                        <pre class="code-highlight"><code id="code-highlight"></code></pre>
+                        <textarea class="code-input" id="code-input" spellcheck="false"></textarea>
+                    </div>
+                    <div class="minimap" id="minimap"></div>
+                </div>
+
+                <div class="bottom-panel">
+                    <div class="panel-tabs">
+                        <div class="panel-tab active" onclick="SonaCode.switchPanel('terminal')">TERMINAL</div>
+                        <div class="panel-tab" onclick="SonaCode.switchPanel('output')">OUTPUT</div>
+                        <div class="panel-tab" onclick="SonaCode.switchPanel('problems')">PROBLEMS (0)</div>
+                    </div>
+                    <div class="panel-body" id="panel-body">
+                        SonaCode Terminal v5.0 ready. Type or prompt AI Agent to execute actions.
+                    </div>
+                </div>
+            </main>
+
+            <aside class="ai-sidebar" id="ai-sidebar">
+                <div class="ai-header">
+                    <span>✨ AI Agent & Engine</span>
+                    <button class="btn" onclick="SonaCode.clearAIChat()" style="padding:2px 4px; font-size:10px;">Очистить</button>
+                </div>
+
+                <div class="ai-config-box">
+                    <select class="ai-select" id="ai-model-select" onchange="SonaCode.onModelChange(this.value)">
+                        <optgroup label="OpenAI">
+                            <option value="gpt-4o">GPT-4o (Omni Agent)</option>
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                        </optgroup>
+                        <optgroup label="Anthropic">
+                            <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+                        </optgroup>
+                        <optgroup label="DeepSeek / OpenRouter">
+                            <option value="deepseek-v3">DeepSeek V3</option>
+                            <option value="deepseek-r1">DeepSeek R1</option>
+                        </optgroup>
+                        <optgroup label="Local">
+                            <option value="ollama-llama3">Ollama / Local</option>
+                        </optgroup>
+                    </select>
+
+                    <input type="password" class="ai-input-key" id="ai-api-key" placeholder="API Key (sk-...)..." onchange="SonaCode.saveApiKey(this.value)">
+                </div>
+
+                <div class="agent-status-box" id="agent-status-box">
+                    ⚡ <b>AI Agent Работает:</b> <span id="agent-step-text">Анализ запроса...</span>
+                </div>
+
+                <div class="ai-chat-body" id="ai-chat-body">
+                    <div class="chat-bubble ai">Привет! Я AI Agent. Напишите запрос, например: <i>"Создай интернет-магазин на React"</i> или <i>"Найди баги в коде"</i>, и я автоматически сгенерирую нужные файлы и структуру.</div>
+                </div>
+
+                <div class="ai-input-area">
+                    <textarea class="ai-textarea" id="ai-input" placeholder="Запрос для AI Agent..."></textarea>
+                    <button class="btn btn-primary" onclick="SonaCode.sendAIQuery()" style="width:100%;">Запустить Agent</button>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <div class="diff-modal" id="diff-modal">
+        <div class="diff-container">
+            <div class="diff-header">
+                <span>Просмотр изменений (Diff Viewer)</span>
+                <span style="font-size:11px; color:var(--text-muted)" id="diff-model-label">AI Review</span>
+            </div>
+            <div class="diff-body">
+                <div class="diff-pane old" id="diff-old"></div>
+                <div class="diff-pane new" id="diff-new"></div>
+            </div>
+            <div class="diff-footer">
+                <button class="btn" onclick="SonaCode.rejectDiff()">Отклонить</button>
+                <button class="btn btn-primary" onclick="SonaCode.acceptDiff()">Применить изменения</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="status-bar">
+        <div><span id="status-saved">Saved</span></div>
+        <div><span id="status-model-display">Model: GPT-4o</span> | <span id="status-lang">UTF-8</span></div>
+    </footer>
+
+    <script>
+        /* ==========================================================================
+           WEB CRYPTO API (ШИФРОВАНИЕ ДАННЫХ)
+           ========================================================================== */
+        class SonaCryptoManager {
+            constructor() {
+                this.crypto = window.crypto.subtle;
+                this.PBKDF2_ITERATIONS = 250000;
+            }
+
+            _textToBytes(text) { return new TextEncoder().encode(text); }
+
+            async deriveKeyFromPassword(password, salt) {
+                const passwordBytes = this._textToBytes(password);
+                const keyMaterial = await this.crypto.importKey('raw', passwordBytes, 'PBKDF2', false, ['deriveKey']);
+                return await this.crypto.deriveKey(
+                    { name: 'PBKDF2', salt: salt, iterations: this.PBKDF2_ITERATIONS, hash: 'SHA-256' },
+                    keyMaterial,
+                    { name: 'AES-GCM', length: 256 },
+                    true,
+                    ['encrypt', 'decrypt']
+                );
+            }
+        }
+
+        /* ==========================================================================
+           ЯДРО РЕДАКТОРА
+           ========================================================================== */
+        class SonaEditor {
+            constructor(app) {
+                this.app = app;
+                this.input = document.getElementById('code-input');
+                this.highlight = document.getElementById('code-highlight');
+                this.gutter = document.getElementById('gutter');
+                this.minimap = document.getElementById('minimap');
+                
+                this.history = [];
+                this.historyStep = -1;
+                this.initEvents();
+            }
+
+            initEvents() {
+                this.input.addEventListener('input', () => { this.onContentChange(); this.saveHistory(); });
+                this.input.addEventListener('scroll', () => this.syncScroll());
+                this.input.addEventListener('keydown', (e) => this.handleAutoClose(e));
+            }
+
+            setContent(val) {
+                this.input.value = val;
+                this.onContentChange();
+                this.history = [val];
+                this.historyStep = 0;
+            }
+
+            getContent() { return this.input.value; }
+
+            onContentChange() {
+                const val = this.input.value;
+                this.renderHighlight(val);
+                this.updateGutter();
+                this.minimap.textContent = val;
+                this.app.markUnsaved();
+            }
+
+            syncScroll() {
+                this.highlight.parentElement.scrollTop = this.input.scrollTop;
+                this.gutter.scrollTop = this.input.scrollTop;
+            }
+
+            updateGutter() {
+                const lines = this.input.value.split('\n').length;
+                this.gutter.innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('<br>');
+            }
+
+            renderHighlight(code) {
+                let html = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                html = html
+                    .replace(/(\/\/.+$)/gm, '<span class="token-comment">$1</span>')
+                    .replace(/(".*?"|'.*?'|`.*?`)/g, '<span class="token-string">$1</span>')
+                    .replace(/\b(const|let|var|function|return|if|else|for|while|class|import|export|from)\b/g, '<span class="token-keyword">$1</span>')
+                    .replace(/\b(\d+)\b/g, '<span class="token-number">$1</span>');
+                this.highlight.innerHTML = html + '\n';
+            }
+
+            handleAutoClose(e) {
+                const pairs = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'" };
+                if (pairs[e.key]) {
+                    e.preventDefault();
+                    const start = this.input.selectionStart;
+                    const val = this.input.value;
+                    this.input.value = val.substring(0, start) + e.key + pairs[e.key] + val.substring(this.input.selectionEnd);
+                    this.input.selectionStart = this.input.selectionEnd = start + 1;
+                    this.onContentChange();
+                }
+            }
+
+            saveHistory() {
+                this.history = this.history.slice(0, this.historyStep + 1);
+                this.history.push(this.input.value);
+                this.historyStep++;
+            }
+        }
+
+        /* ==========================================================================
+           ПРИЛОЖЕНИЕ, ДЕРЕВО ФАЙЛОВ И AI AGENT
+           ========================================================================== */
+        class SonaCodeApp {
+            constructor() {
+                this.editor = new SonaEditor(this);
+                this.crypto = new SonaCryptoManager();
+                
+                // Структура проекта (папки и файлы)
+                this.projectTree = JSON.parse(localStorage.getItem('sonacode_tree')) || [
+                    { type: 'folder', name: 'src', children: [
+                        { id: '1', type: 'file', name: 'index.js', content: 'console.log("App Started");' },
+                        { id: '2', type: 'file', name: 'styles.css', content: 'body { background: #f8fafc; }' }
+                    ]},
+                    { id: '3', type: 'file', name: 'package.json', content: '{\n  "name": "my-app",\n  "version": "1.0.0"\n}' },
+                    { id: '4', type: 'file', name: 'README.md', content: '# My App' }
+                ];
+
+                this.activeFileId = '1';
+                this.pendingAiCode = null;
+                this.selectedModel = localStorage.getItem('sona_ai_model') || 'gpt-4o';
+                this.apiKey = localStorage.getItem('sona_ai_key') || '';
+
+                this.init();
+            }
+
+            init() {
+                this.renderFileTree();
+                this.renderTabs();
+                this.openFile('1');
+                
+                document.getElementById('ai-model-select').value = this.selectedModel;
+                document.getElementById('ai-api-key').value = this.apiKey;
+            }
+
+            // Получение плоского списка всех файлов для работы AI
+            getAllFiles(nodes = this.projectTree) {
+                let list = [];
+                for (let node of nodes) {
+                    if (node.type === 'file') list.push(node);
+                    if (node.type === 'folder' && node.children) list += list.concat(this.getAllFiles(node.children));
+                }
+                return list;
+            }
+
+            findFileById(id, nodes = this.projectTree) {
+                for (let node of nodes) {
+                    if (node.id === id) return node;
+                    if (node.type === 'folder' && node.children) {
+                        const found = this.findFileById(id, node.children);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            }
+
+            renderFileTree() {
+                const container = document.getElementById('file-tree');
+                container.innerHTML = this.buildTreeHTML(this.projectTree);
+            }
+
+            buildTreeHTML(nodes) {
+                return nodes.map(node => {
+                    if (node.type === 'folder') {
+                        return `<div class="file-item folder">📁 ${node.name}</div>
+                                <div style="padding-left:12px;">${this.buildTreeHTML(node.children || [])}</div>`;
+                    } else {
+                        return `<div class="file-item ${node.id === this.activeFileId ? 'active' : ''}" onclick="SonaCode.openFile('${node.id}')">
+                                    📄 ${node.name}
+                                </div>`;
+                    }
+                }).join('');
+            }
+
+            renderTabs() {
+                const files = this.getAllFiles();
+                document.getElementById('tabs-container').innerHTML = files.map(f => `
+                    <div class="tab ${f.id === this.activeFileId ? 'active' : ''}" onclick="SonaCode.openFile('${f.id}')">
+                        <span>${f.name}</span>
+                        <span class="tab-close" onclick="event.stopPropagation(); SonaCode.deleteFile('${f.id}')">✕</span>
+                    </div>
+                `).join('');
+            }
+
+            openFile(id) {
+                const file = this.findFileById(id);
+                if (file) {
+                    this.activeFileId = id;
+                    this.editor.setContent(file.content || '');
+                    document.getElementById('breadcrumbs').textContent = `root / ${file.name}`;
+                    this.renderFileTree();
+                    this.renderTabs();
+                }
+            }
+
+            markUnsaved() { document.getElementById('status-saved').textContent = 'Unsaved*'; }
+
+            saveCurrentFile() {
+                const file = this.findFileById(this.activeFileId);
+                if (file) {
+                    file.content = this.editor.getContent();
+                    localStorage.setItem('sonacode_tree', JSON.stringify(this.projectTree));
+                    document.getElementById('status-saved').textContent = 'Saved';
+                }
+            }
+
+            createNewFile() {
+                const name = prompt('Имя файла:', 'Component.jsx');
+                if (!name) return;
+                const newFile = { id: Date.now().toString(), type: 'file', name, content: '// New File\n' };
+                this.projectTree.push(newFile);
+                this.saveCurrentFile();
+                this.openFile(newFile.id);
+            }
+
+            createNewFolder() {
+                const name = prompt('Имя папки:', 'components');
+                if (!name) return;
+                this.projectTree.push({ type: 'folder', name, children: [] });
+                this.renderFileTree();
+            }
+
+            deleteFile(id) {
+                const files = this.getAllFiles();
+                if (files.length <= 1) return;
+                this.projectTree = this.projectTree.filter(item => item.id !== id);
+                this.saveCurrentFile();
+                this.openFile(this.getAllFiles()[0].id);
+            }
+
+            toggleAI() { document.getElementById('ai-sidebar').classList.toggle('hidden'); }
+            onModelChange(val) { this.selectedModel = val; localStorage.setItem('sona_ai_model', val); }
+            saveApiKey(val) { this.apiKey = val.trim(); localStorage.setItem('sona_ai_key', this.apiKey); }
+
+            /* AI AGENT LOGIC (ГЕНЕРАЦИЯ ПРОЕКТА И ИЗМЕНЕНИЙ) */
+            sendAIQuery() {
+                const input = document.getElementById('ai-input');
+                const query = input.value.trim();
+                if (!query) return;
+
+                this.appendChatMessage(query, 'user');
+                input.value = '';
+
+                const statusBox = document.getElementById('agent-status-box');
+                const statusText = document.getElementById('agent-step-text');
+                statusBox.classList.add('active');
+
+                // Проверка: Запрос на автосоздание целого проекта (Agent Mode)
+                if (query.toLowerCase().includes('магазин') || query.toLowerCase().includes('создай проект') || query.toLowerCase().includes('react')) {
+                    statusText.textContent = "Анализ архитектуры и генерация файлов проекта...";
+                    
+                    setTimeout(() => {
+                        // Автоматическое создание сложной структуры ИИ-агентом
+                        this.projectTree = [
+                            { type: 'folder', name: 'src', children: [
+                                { type: 'folder', name: 'components', children: [
+                                    { id: '10', type: 'file', name: 'Header.jsx', content: 'export default function Header() { return <header><h1>React Store</h1></header>; }' },
+                                    { id: '11', type: 'file', name: 'ProductList.jsx', content: 'export default function ProductList() { return <div>Products...</div>; }' }
+                                ]},
+                                { id: '12', type: 'file', name: 'App.jsx', content: 'import Header from "./components/Header";\n\nexport default function App() { return <main><Header /></main>; }' },
+                                { id: '13', type: 'file', name: 'index.js', content: 'import React from "react";\nimport App from "./App";' }
+                            ]},
+                            { id: '14', type: 'file', name: 'package.json', content: '{\n  "name": "react-store",\n  "dependencies": {\n    "react": "^18.2.0"\n  }\n}' },
+                            { id: '15', type: 'file', name: 'README.md', content: '# React Store App\nGenerated automatically by SonaAI Agent.' }
+                        ];
+
+                        this.saveCurrentFile();
+                        this.openFile('12');
+                        statusBox.classList.remove('active');
+                        this.appendChatMessage(`✅ Проект успешно сгенерирован и развернут в дереве файлов!`, 'ai');
+                    }, 1200);
+
+                } else {
+                    // Режим точечной модификации текущего файла через Diff Viewer
+                    statusText.textContent = "Генерация ответа и кода...";
+                    setTimeout(() => {
+                        const currentCode = this.editor.getContent();
+                        const generatedCode = currentCode + `\n\n// AI [${this.selectedModel}]: ${query}\nfunction aiFeature() {\n    return "Feature Processed";\n}`;
+                        
+                        this.pendingAiCode = generatedCode;
+                        statusBox.classList.remove('active');
+                        this.appendChatMessage(`Ответ готов! Проверьте предложенный код в Diff Viewer.`, 'ai');
+                        this.showDiff(currentCode, generatedCode);
+                    }, 800);
+                }
+            }
+
+            appendChatMessage(msg, type) {
+                const body = document.getElementById('ai-chat-body');
+                const bubble = document.createElement('div');
+                bubble.className = `chat-bubble ${type}`;
+                bubble.textContent = msg;
+                body.appendChild(bubble);
+                body.scrollTop = body.scrollHeight;
+            }
+
+            clearAIChat() { document.getElementById('ai-chat-body').innerHTML = ''; }
+
+            showDiff(oldCode, newCode) {
+                document.getElementById('diff-old').textContent = oldCode;
+                document.getElementById('diff-new').textContent = newCode;
+                document.getElementById('diff-modal').classList.add('visible');
+            }
+
+            acceptDiff() {
+                if (this.pendingAiCode !== null) {
+                    this.editor.setContent(this.pendingAiCode);
+                    this.saveCurrentFile();
+                    this.pendingAiCode = null;
+                }
+                document.getElementById('diff-modal').classList.remove('visible');
+            }
+
+            rejectDiff() {
+                this.pendingAiCode = null;
+                document.getElementById('diff-modal').classList.remove('visible');
+            }
+
+            switchPanel(type) {
+                const body = document.getElementById('panel-body');
+                if (type === 'terminal') body.textContent = 'SonaCode Terminal v5.0 ready.';
+                if (type === 'output') body.textContent = '[Build Status]: Compiled successfully.';
+                if (type === 'problems') body.textContent = 'No syntax errors or warnings found.';
+            }
+
+            runCode() { alert('Выполнение кода задействовано!'); }
+        }
+
+        let SonaCode;
+        window.addEventListener('DOMContentLoaded', () => { SonaCode = new SonaCodeApp(); });
+    </script>
+</body>
+</html>
